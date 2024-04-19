@@ -10,57 +10,91 @@ import (
 )
 
 type model struct {
-    choices  []string           
-    cursor   int               
+    cursor   int
     selected string
-    input string
+    input    string
+    newBranch   *bool
 }
 
 func initialModel() model {
 	return model{
-		choices:  []string{"Feature", "Bug", "Fix"},
 	}
 }
 
 func (m model) Init() tea.Cmd {
-    // Just return `nil`, which means "no I/O right now, please."
     return nil
 }
+
+var newBranch = []string{"Yes", "No"}
+var choices = []string{"Feature", "Bug", "Fix"}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch msg := msg.(type) {
 
     case tea.KeyMsg:
-        switch msg.String() {
+        input := msg.String()
 
-        case "ctrl+c":
+        if input == "ctrl+c" {
             return model{}, tea.Quit
+        }
 
-        case "up":
-            if m.cursor > 0 {
-                m.cursor--
-            }
+        // type prompt
+        if m.selected == "" {
+            switch input {
+                case "up":
+                    if m.cursor > 0 {
+                        m.cursor--
+                    }
 
-        case "down":
-            if m.cursor < len(m.choices)-1 {
-                m.cursor++
-            }
+                case "down":
+                    if m.cursor < len(choices)-1 {
+                        m.cursor++
+                    }
 
-        case "enter":
+                case "enter":
+                    m.selected = choices[m.cursor]
+                    m.cursor = 0
+            }
+            return m, nil
+        }
 
-            if m.selected == "" {
-                m.selected = m.choices[m.cursor]
-            }
+        //new branch prompt
+        if m.selected != "" && m.newBranch == nil {
+            switch input {
+                case "up":
+                    if m.cursor > 0 {
+                        m.cursor--
+                    }
 
-            if m.input != "" {
-               return m, tea.Quit
+                case "down":
+                    if m.cursor < len(newBranch)-1 {
+                        m.cursor++
+                    }
+
+                case "enter":
+                    if newBranch[m.cursor] == "Yes" {
+                        m.newBranch = &[]bool{true}[0]
+                    } else {
+                        m.newBranch = &[]bool{false}[0]
+                    }
             }
-        case "backspace":
-            if len(m.input) > 0 {
-                m.input = m.input[:len(m.input)-1]
+            return m, nil
+        }
+
+        // branch name prompt
+        if m.selected != "" && m.newBranch != nil {
+            switch input {
+                case "enter":
+                    if m.input != "" {
+                       return m, tea.Quit
+                    }
+                case "backspace":
+                    if len(m.input) > 0 {
+                        m.input = m.input[:len(m.input)-1]
+                    }
+                default: 
+                    m.input += msg.String()
             }
-        default: 
-            m.input += msg.String()
         }
     }
 
@@ -72,7 +106,18 @@ func (m model) View() string {
     if m.selected == "" {
         s = "What type of branch?\n\n"
 
-        for i, choice := range m.choices {
+        for i, choice := range choices {
+            cursor := " "
+            if m.cursor == i {
+                cursor = ">"
+            }
+
+            s += fmt.Sprintf("%s %s\n", cursor, choice)
+        }
+    }
+    if m.selected != "" && m.newBranch == nil {
+        s = "New branch??\n\n"
+        for i, choice := range newBranch {
             cursor := " "
             if m.cursor == i {
                 cursor = ">"
@@ -82,7 +127,7 @@ func (m model) View() string {
         }
     }
 
-    if m.selected != "" {
+    if m.selected != "" && m.newBranch != nil {
         s = "Name of branch?\n\n"
        s += fmt.Sprintf("> %s", m.input) 
     }
@@ -98,6 +143,7 @@ func main() {
         os.Exit(1)
     }
 
+    fmt.Printf("%+v\n", m)
     if m, ok := m.(model); ok && m.input != "" {
         folderName := ""
         branchName := ""
@@ -118,7 +164,13 @@ func main() {
 
         folderName += strings.ToLower(m.input)
         branchName += strings.ToLower(m.input)
-        cmd := exec.Command("git", "worktree", "add", folderName, "-b", branchName)
+
+        flag := ""
+        if *m.newBranch {
+            flag = "-b"
+        }
+
+        cmd := exec.Command("git", "worktree", "add", folderName, flag, branchName)
 
         err := cmd.Run()
 
