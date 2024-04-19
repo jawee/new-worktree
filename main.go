@@ -34,7 +34,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         switch msg.String() {
 
         case "ctrl+c":
-            return m, tea.Quit
+            return model{}, tea.Quit
 
         case "up":
             if m.cursor > 0 {

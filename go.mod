@@ -1,6 +1,6 @@
 module github.com/jawee/new-worktree
 
-go 1.20
+go 1.22
 
 require (
 	github.com/aymanbagabas/go-osc52 v1.2.1 // indirect
