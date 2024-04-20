@@ -1,32 +1,41 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
-	"strings"
+    "fmt"
+    "os"
+    "os/exec"
+    "strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+    tea "github.com/charmbracelet/bubbletea"
 )
 
 type model struct {
-    cursor   int
-    selected string
-    input    string
-    newBranch   *bool
+    cursor    int
+    selected  string
+    input     string
+    newBranch bool
+    page      PageType
 }
 
+type PageType int
+const (
+    BRANCH_TYPE PageType = iota
+    NEW_BRANCH
+    NAME
+)
+
 func initialModel() model {
-	return model{
-	}
+    return model{
+        page: BRANCH_TYPE,
+    }
 }
 
 func (m model) Init() tea.Cmd {
     return nil
 }
 
-var newBranch = []string{"Yes", "No"}
-var choices = []string{"Feature", "Bug", "Fix"}
+var newBranchChocies = []string{"Yes", "No"}
+var branchTypeChoices = []string{"Feature", "Bug", "Fix"}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch msg := msg.(type) {
@@ -39,61 +48,63 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
 
         // type prompt
-        if m.selected == "" {
+        if m.page == BRANCH_TYPE {
             switch input {
-                case "up":
-                    if m.cursor > 0 {
-                        m.cursor--
-                    }
+            case "up":
+                if m.cursor > 0 {
+                    m.cursor--
+                }
 
-                case "down":
-                    if m.cursor < len(choices)-1 {
-                        m.cursor++
-                    }
+            case "down":
+                if m.cursor < len(branchTypeChoices)-1 {
+                    m.cursor++
+                }
 
-                case "enter":
-                    m.selected = choices[m.cursor]
-                    m.cursor = 0
+            case "enter":
+                m.selected = branchTypeChoices[m.cursor]
+                m.cursor = 0
+                m.page = NEW_BRANCH
             }
             return m, nil
         }
 
         //new branch prompt
-        if m.selected != "" && m.newBranch == nil {
+        if m.page == NEW_BRANCH {
             switch input {
-                case "up":
-                    if m.cursor > 0 {
-                        m.cursor--
-                    }
+            case "up":
+                if m.cursor > 0 {
+                    m.cursor--
+                }
 
-                case "down":
-                    if m.cursor < len(newBranch)-1 {
-                        m.cursor++
-                    }
+            case "down":
+                if m.cursor < len(newBranchChocies)-1 {
+                    m.cursor++
+                }
 
-                case "enter":
-                    if newBranch[m.cursor] == "Yes" {
-                        m.newBranch = &[]bool{true}[0]
-                    } else {
-                        m.newBranch = &[]bool{false}[0]
-                    }
+            case "enter":
+                if newBranchChocies[m.cursor] == "Yes" {
+                    m.newBranch = true
+                } else {
+                    m.newBranch = false
+                }
+                m.page = NAME
             }
             return m, nil
         }
 
         // branch name prompt
-        if m.selected != "" && m.newBranch != nil {
+        if m.page == NAME {
             switch input {
-                case "enter":
-                    if m.input != "" {
-                       return m, tea.Quit
-                    }
-                case "backspace":
-                    if len(m.input) > 0 {
-                        m.input = m.input[:len(m.input)-1]
-                    }
+            case "enter":
+                if m.input != "" {
+                    return m, tea.Quit
+                }
+            case "backspace":
+                if len(m.input) > 0 {
+                    m.input = m.input[:len(m.input)-1]
+                }
                 default: 
-                    m.input += msg.String()
+                m.input += msg.String()
             }
         }
     }
@@ -103,10 +114,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
     s := ""
-    if m.selected == "" {
+    if m.page == BRANCH_TYPE {
         s = "What type of branch?\n\n"
 
-        for i, choice := range choices {
+        for i, choice := range branchTypeChoices {
             cursor := " "
             if m.cursor == i {
                 cursor = ">"
@@ -115,9 +126,9 @@ func (m model) View() string {
             s += fmt.Sprintf("%s %s\n", cursor, choice)
         }
     }
-    if m.selected != "" && m.newBranch == nil {
-        s = "New branch??\n\n"
-        for i, choice := range newBranch {
+    if m.page == NEW_BRANCH {
+        s = "New branch?\n\n"
+        for i, choice := range newBranchChocies {
             cursor := " "
             if m.cursor == i {
                 cursor = ">"
@@ -127,9 +138,9 @@ func (m model) View() string {
         }
     }
 
-    if m.selected != "" && m.newBranch != nil {
+    if m.page == NAME {
         s = "Name of branch?\n\n"
-       s += fmt.Sprintf("> %s", m.input) 
+        s += fmt.Sprintf("> %s", m.input) 
     }
 
     return s
@@ -143,7 +154,6 @@ func main() {
         os.Exit(1)
     }
 
-    fmt.Printf("%+v\n", m)
     if m, ok := m.(model); ok && m.input != "" {
         folderName := ""
         branchName := ""
@@ -166,7 +176,7 @@ func main() {
         branchName += strings.ToLower(m.input)
 
         flag := ""
-        if *m.newBranch {
+        if m.newBranch {
             flag = "-b"
         }
 
