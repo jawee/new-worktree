@@ -1,0 +1,43 @@
+name: Build and Release
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Build Linux
+        run: go build GOOS=linux GOARCH=amd64 -o new-worktree
+      - name: Zip Linux
+        run: zip new-worktree-linux.zip new-worktree
+      - name: Remove linux binary
+        run: rm new-worktree
+
+      - name: Build MacOS
+        run: go build GOOS=darwin -o new-worktree
+      - name: Zip MacOS
+        run: zip new-worktree-macos.zip new-worktree
+      - name: Remove MacOS binary
+        run: rm new-worktree
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: |
+            new-worktree-linux.zip
+            new-worktree-macos.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            new-worktree-linux
+            new-worktree-macos
