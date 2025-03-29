@@ -16,28 +16,34 @@ jobs:
         run: GOOS=linux GOARCH=amd64 go build -o new-worktree
       - name: Zip Linux
         run: zip new-worktree-linux.zip new-worktree
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-worktree-linux
+          path: |
+            new-worktree
+
       - name: Remove linux binary
         run: rm new-worktree
 
       - name: Build MacOS
         run: GOOS=darwin go build -o new-worktree
+      - name: Upload MacOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-worktree-macos
+          path: |
+            new-worktree
       - name: Zip MacOS
         run: zip new-worktree-macos.zip new-worktree
       - name: Remove MacOS binary
         run: rm new-worktree
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifacts
-          path: |
-            new-worktree-linux.zip
-            new-worktree-macos.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            new-worktree-linux
-            new-worktree-macos
+            new-worktree-linux.zip
+            new-worktree-macos.zip
