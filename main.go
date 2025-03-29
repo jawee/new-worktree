@@ -35,7 +35,7 @@ func (m model) Init() tea.Cmd {
 }
 
 var newBranchChocies = []string{"Yes", "No"}
-var branchTypeChoices = []string{"Feature", "Bug", "Fix"}
+var branchTypeChoices = []string{"Feature", "Bug", "Fix", "Chore"}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch msg := msg.(type) {
@@ -166,7 +166,11 @@ func main() {
         } else if m.selected == "Fix" {
             folderName += "fix-"
             branchName += "fix/"
-        }
+        } else if (m.selected == "Chore") {
+			folderName += "chore-"
+			branchName += "chore/"
+		}
+
         if folderName == "" {
             fmt.Printf("Do nothing")
             os.Exit(1)
